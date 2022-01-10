@@ -1,5 +1,7 @@
 use mongodb::{options::ClientOptions, Client, Database};
 
+pub mod user;
+
 pub async fn connect_to_database() -> mongodb::error::Result<Database> {
     println!("Connecting to Mongo");
 

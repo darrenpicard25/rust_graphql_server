@@ -2,8 +2,11 @@ use async_graphql::http::{playground_source, GraphQLPlaygroundConfig};
 use async_graphql::{EmptySubscription, Schema};
 use async_graphql_warp::{GraphQLBadRequest, GraphQLResponse};
 use std::convert::Infallible;
+use std::sync::Arc;
 use warp::hyper::StatusCode;
 use warp::{http::Response as HttpResponse, Filter, Rejection};
+
+use crate::repositories::user::MongoRepository;
 
 mod api;
 mod domain;
@@ -15,10 +18,16 @@ async fn main() {
         .await
         .expect("Error connecting to mongo");
 
+    let repository = Arc::new(MongoRepository::new(db));
+
     println!("Playground: http://localhost:8000");
-    let schema = Schema::build(api::Query::default(), api::Mutation, EmptySubscription)
-        .data(db)
-        .finish();
+    let schema = Schema::build(
+        api::Query::default(),
+        api::Mutation::default(),
+        EmptySubscription,
+    )
+    .data(repository)
+    .finish();
 
     let graphql_post = async_graphql_warp::graphql(schema).and_then(
         |(schema, request): (
