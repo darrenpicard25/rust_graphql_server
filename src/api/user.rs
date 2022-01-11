@@ -9,6 +9,7 @@ use async_graphql::{Context, Error, Object, Result, SimpleObject};
 
 #[derive(SimpleObject)]
 struct User {
+    id: String,
     email: String,
 }
 
@@ -20,10 +21,20 @@ pub struct UserMutations;
 
 #[Object]
 impl UserQuery {
-    async fn user(&self) -> User {
-        let user = find_one::execute();
+    async fn user(&self, ctx: &Context<'_>, id: String) -> Result<User> {
+        let repo = ctx.data::<Arc<MongoRepository>>().unwrap();
 
-        User { email: user.email }
+        let result = find_one::execute(repo.clone(), id).await;
+
+        match result {
+            Ok(user) => Ok(User {
+                id: user.id,
+                email: user.email,
+            }),
+            Err(find_one::FindOneError::NotFound) => Err(Error::new("Not Found")),
+            Err(find_one::FindOneError::InvalidId) => Err(Error::new("Invalid Input")),
+            Err(find_one::FindOneError::Unknown) => Err(Error::new("Unknown")),
+        }
     }
 }
 
@@ -47,8 +58,12 @@ impl UserMutations {
         .await;
 
         match result {
-            Ok(user) => Ok(User { email: user.email }),
-            Err(_) => Err(Error::new("Unknown Error")),
+            Ok(user) => Ok(User {
+                id: user.id,
+                email: user.email,
+            }),
+            Err(register::RegisterError::AlreadyExists) => Err(Error::new("Already Exists")),
+            Err(register::RegisterError::Unknown) => Err(Error::new("Unknown Error")),
         }
     }
 }
