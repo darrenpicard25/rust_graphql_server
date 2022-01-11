@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
-    domain::user::{find_one, register},
+    domain::user::{find_one, register, sign_in},
     repositories::user::MongoRepository,
 };
 
@@ -64,6 +64,28 @@ impl UserMutations {
             }),
             Err(register::RegisterError::AlreadyExists) => Err(Error::new("Already Exists")),
             Err(register::RegisterError::Unknown) => Err(Error::new("Unknown Error")),
+        }
+    }
+
+    async fn sign_in(&self, ctx: &Context<'_>, username: String, password: String) -> Result<User> {
+        let repo = ctx.data::<Arc<MongoRepository>>().unwrap();
+
+        let result = sign_in::execute(
+            repo.clone(),
+            sign_in::Input {
+                email: username,
+                password,
+            },
+        )
+        .await;
+
+        match result {
+            Ok(user) => Ok(User {
+                id: user.id,
+                email: user.email,
+            }),
+            Err(sign_in::SignInError::Failed) => Err(Error::new("Login Failed")),
+            Err(sign_in::SignInError::Unknown) => Err(Error::new("Unknown Error")),
         }
     }
 }

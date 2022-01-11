@@ -1,66 +1,21 @@
-use async_trait::async_trait;
-use mongodb::{
-    bson::{doc, oid::ObjectId, DateTime},
-    Database,
-};
-use serde::{Deserialize, Serialize};
 use std::time::SystemTime;
 
-#[cfg(test)]
-use mockall::*;
-use tokio::sync::Mutex;
+use async_trait::async_trait;
+use mongodb::bson::{doc, oid::ObjectId, DateTime};
+use serde::{Deserialize, Serialize};
 
 use crate::domain::user::entities::User;
 
-pub struct CreateInput {
-    pub email: String,
-    pub password: String,
-}
+use super::{
+    CreateError, CreateInput, FindByIdError, FindOneByEmailError, MongoRepository, Repository,
+};
 
-pub enum CreateError {
-    Unknown,
-}
-
-pub enum FindByIdError {
-    InvalidId,
-    NotFound,
-    Unknown,
-}
-
-pub enum FindOneByEmailError {
-    Unknown,
-}
-
-#[cfg_attr(test, automock)]
-#[async_trait]
-pub trait Repository: Send + Sync {
-    async fn find_by_id(&self, id: String) -> Result<User, FindByIdError>;
-    async fn find_one_by_email(&self, email: String) -> Result<Option<User>, FindOneByEmailError>;
-    async fn create(&self, input: CreateInput) -> Result<User, CreateError>;
-}
-
-#[derive(Deserialize, Serialize, Debug)]
+#[derive(Deserialize, Serialize)]
 struct UserDocument {
     _id: ObjectId,
     email: String,
     password: String,
     created_at: DateTime,
-}
-
-pub struct MongoRepository {
-    database: Mutex<Database>,
-    collection: String,
-    error: bool,
-}
-
-impl MongoRepository {
-    pub fn new(db: Database) -> Self {
-        Self {
-            error: false,
-            database: Mutex::new(db),
-            collection: "user".to_string(),
-        }
-    }
 }
 
 #[async_trait]
@@ -107,8 +62,6 @@ impl Repository for MongoRepository {
             .collection::<UserDocument>(self.collection.as_str())
             .find_one(Some(doc! { "email": email }), None)
             .await;
-
-        println!("Doc: {:?}", results);
 
         match results {
             Ok(Some(doc)) => Ok(Some(User {

@@ -6,7 +6,7 @@ use std::sync::Arc;
 use warp::hyper::StatusCode;
 use warp::{http::Response as HttpResponse, Filter, Rejection};
 
-use crate::repositories::user::MongoRepository;
+use crate::repositories::user;
 
 mod api;
 mod domain;
@@ -18,7 +18,7 @@ async fn main() {
         .await
         .expect("Error connecting to mongo");
 
-    let repository = Arc::new(MongoRepository::new(db));
+    let repository = Arc::new(user::MongoRepository::new(db));
 
     println!("Playground: http://localhost:8000");
     let schema = Schema::build(
