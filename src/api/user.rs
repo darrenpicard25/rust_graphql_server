@@ -64,6 +64,7 @@ impl UserMutations {
             }),
             Err(register::RegisterError::AlreadyExists) => Err(Error::new("Already Exists")),
             Err(register::RegisterError::Unknown) => Err(Error::new("Unknown Error")),
+            Err(register::RegisterError::InvalidPassword) => Err(Error::new("Invalid Password")),
         }
     }
 
@@ -86,6 +87,9 @@ impl UserMutations {
             }),
             Err(sign_in::SignInError::Failed) => Err(Error::new("Login Failed")),
             Err(sign_in::SignInError::Unknown) => Err(Error::new("Unknown Error")),
+            Err(sign_in::SignInError::InvalidPasswordFormat) => {
+                Err(Error::new("Invalid Password Format"))
+            }
         }
     }
 }

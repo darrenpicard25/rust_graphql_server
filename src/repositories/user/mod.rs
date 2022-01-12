@@ -39,7 +39,7 @@ impl MongoRepository {
         Self {
             error: false,
             database: Mutex::new(db),
-            collection: "user".to_string(),
+            collection: "users".to_string(),
         }
     }
 }

@@ -1,20 +1,22 @@
-use std::sync::Arc;
-
 use crate::repositories::user;
+use std::{sync::Arc, time::Duration};
+use tokio::time::sleep;
 
-use super::entities::User;
+use super::{entities::User, hash_password};
 
 pub struct Input {
     pub email: String,
     pub password: String,
 }
 pub enum SignInError {
+    InvalidPasswordFormat,
     Failed,
     Unknown,
 }
 
-pub async fn execute(repo: Arc<dyn user::Repository>, input: Input) -> Result<User, SignInError> {
+async fn logic(repo: Arc<dyn user::Repository>, input: Input) -> Result<User, SignInError> {
     let Input { email, password } = input;
+
     let user = repo.find_one_by_email(email.clone()).await;
 
     let user = match user {
@@ -23,7 +25,12 @@ pub async fn execute(repo: Arc<dyn user::Repository>, input: Input) -> Result<Us
         Err(user::FindOneByEmailError::Unknown) => return Err(SignInError::Unknown),
     };
 
-    if user.password != password {
+    let hashed_password = match hash_password::execute(password) {
+        Ok(pass) => pass,
+        Err(_) => return Err(SignInError::InvalidPasswordFormat),
+    };
+
+    if user.password != hashed_password {
         return Err(SignInError::Failed);
     }
 
@@ -32,6 +39,13 @@ pub async fn execute(repo: Arc<dyn user::Repository>, input: Input) -> Result<Us
         email: user.email,
         password: user.password,
     })
+}
+
+pub async fn execute(repo: Arc<dyn user::Repository>, input: Input) -> Result<User, SignInError> {
+    // Adding delay so it always take 500ms to respond to prevent from seeing difference
+    let (_, results) = tokio::join!(sleep(Duration::from_millis(500)), logic(repo, input));
+
+    results
 }
 
 #[cfg(test)]
@@ -45,7 +59,7 @@ mod tests {
             Ok(Some(User {
                 id: "id".to_string(),
                 email,
-                password: "pass".to_string(),
+                password: hash_password::execute("pass".to_string()).unwrap(),
             }))
         });
 

@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use crate::repositories::user;
 
-use super::entities::User;
+use super::{entities::User, hash_password};
 
 pub struct Input {
     pub email: String,
@@ -10,6 +10,7 @@ pub struct Input {
 }
 #[derive(PartialEq, Eq, Debug)]
 pub enum RegisterError {
+    InvalidPassword,
     AlreadyExists,
     Unknown,
 }
@@ -24,7 +25,17 @@ pub async fn execute(repo: Arc<dyn user::Repository>, input: Input) -> Result<Us
         Err(user::FindOneByEmailError::Unknown) => return Err(RegisterError::Unknown),
     };
 
-    let results = repo.create(user::CreateInput { email, password }).await;
+    let hashed_password = match hash_password::execute(password) {
+        Ok(hash) => hash,
+        Err(_) => return Err(RegisterError::InvalidPassword),
+    };
+
+    let results = repo
+        .create(user::CreateInput {
+            email,
+            password: hashed_password,
+        })
+        .await;
 
     match results {
         Ok(user) => Ok(User {
@@ -76,7 +87,7 @@ mod tests {
                 User {
                     id: "id".to_string(),
                     email,
-                    password
+                    password: hash_password::execute(password).unwrap()
                 }
             ),
             _ => unreachable!(),

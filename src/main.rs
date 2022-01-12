@@ -10,6 +10,7 @@ use crate::repositories::user;
 
 mod api;
 mod domain;
+mod extensions;
 mod repositories;
 
 #[tokio::main]
@@ -27,6 +28,7 @@ async fn main() {
         EmptySubscription,
     )
     .data(repository)
+    .extension(extensions::authentication::Authentication)
     .finish();
 
     let graphql_post = async_graphql_warp::graphql(schema).and_then(
