@@ -12,6 +12,7 @@ async-trait = "0.1.52" # Temp until async trait support
 mongodb = { version = "2.1.0", features = ["tokio-runtime"] }
 rust-argon2 = "1.0.0"
 serde = { version = "1.0.133", features = ["derive"] }
+serde_json = "1.0.74"
 tokio = { version = "1.15.0", features = ["full"] }
 warp = "0.3.2"
 
